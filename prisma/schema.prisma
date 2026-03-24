@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Phase {
+  DISCOVERY
+  CURRENT_TOPOLOGY
+  DESIRED_FUTURE_STATE
+  SOLUTION_DESIGN
+  INFRASTRUCTURE
+  TEST_DESIGN
+  CRAFT_SOLUTION
+  TEST_SOLUTION
+  DEPLOYMENT_PLAN
+  MONITORING
+  ITERATION
+  MEETINGS
+  WORKING_SESSIONS
+  BUILD_LOG
+}
+
+enum ArtifactStatus {
+  CLEAN
+  DIRTY
+  STALE
+  NEEDS_REVIEW
+  CLEAN_WITH_EXCEPTIONS
+}
+
+enum UserRole {
+  ADMIN
+  ADMIRAL
+  CSE
+}
+
+// ---------------------------------------------------------------------------
+// Auth & Users
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           UserRole  @default(CSE)
+  isAdmin        Boolean   @default(false)
+  xp             Int       @default(0)
+  xpLevel        Int       @default(1)
+  xpStreak       Int       @default(0)
+  lastXpEventAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+  projects       Project[]
+  xpEvents       XpEvent[]
+}
+
+model XpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  action    String
+  points    Int
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+model Project {
+  id                      String              @id @default(cuid())
+  name                    String
+  primaryDomain           String?
+  apiDomain               String?
+  publicWorkspaceUrl      String?
+  customerContactName     String?
+  customerContactEmail    String?
+  status                  String              @default("active")
+  engagementStage         Int                 @default(0)
+  completedAt             DateTime?
+  closedWonAt             DateTime?
+  clonedFromId            String?
+  ownerUserId             String?
+  owner                   User?               @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  isPinned                Boolean             @default(false)
+
+  // Service template
+  serviceTemplateContent  String?
+  serviceTemplateType     String?
+  serviceTemplateFileName String?
+  serviceTemplateNotes    String?
+
+  // POC Deliverables
+  pocDeliverablesJson     Json?
+
+  // Shareable architecture form
+  architectShareToken     String?   @unique
+  architectShareData      Json?
+
+  // Relations
+  discoveryArtifacts      DiscoveryArtifact[]
+  sourceDocuments         SourceDocument[]
+  evidenceSnapshots       EvidenceSnapshot[]
+  phaseArtifacts          PhaseArtifact[]
+  recomputeJobs           RecomputeJob[]
+  xpEvents                XpEvent[]
+}
+
+// ---------------------------------------------------------------------------
+// AI Document Pipeline
+// ---------------------------------------------------------------------------
+
+model SourceDocument {
+  id             String          @id @default(cuid())
+  projectId      String
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceType     String
+  externalId     String?
+  contentHash    String?
+  title          String?
+  rawText        String
+  metadataJson   Json?
+  createdAt      DateTime        @default(now())
+  chunks         DocumentChunk[]
+
+  @@unique([projectId, contentHash])
+  @@index([projectId, externalId])
+  @@index([projectId, sourceType])
+}
+
+model DocumentChunk {
+  id            String         @id @default(cuid())
+  documentId    String
+  document      SourceDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projectId     String
+  content       String
+  tokenCount    Int?
+  evidenceLabel String
+  createdAt     DateTime       @default(now())
+
+  @@index([projectId])
+  @@index([projectId, evidenceLabel])
+}
+
+// ---------------------------------------------------------------------------
+// Discovery Artifacts
+// ---------------------------------------------------------------------------
+
+model DiscoveryArtifact {
+  id                     String   @id @default(cuid())
+  projectId              String
+  project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version                Int      @default(1)
+  industry               String?
+  engineeringSize        String?
+  publicApiPresence      String?
+  cloudGatewaySignals    String?
+  hypothesis             String?
+  generatedBriefMarkdown String?
+  createdAt              DateTime @default(now())
+
+  @@unique([projectId, version])
+}
+
+// ---------------------------------------------------------------------------
+// Cascade Update System
+// ---------------------------------------------------------------------------
+
+model EvidenceSnapshot {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunkIdsJson Json
+  countsJson   Json?
+  hash         String
+  createdAt    DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model PhaseArtifact {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase           Phase
+  version         Int
+  status          ArtifactStatus @default(DIRTY)
+  snapshotId      String?
+  contentJson     Json
+  contentMarkdown String?
+  lastComputedAt  DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@unique([projectId, phase, version])
+  @@index([projectId, phase])
+  @@index([projectId, phase, status])
+}
+
+model RecomputeJob {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredBy String
+  snapshotId  String?
+  status      String          @default("PENDING")
+  createdAt   DateTime        @default(now())
+  tasks       RecomputeTask[]
+
+  @@index([projectId])
+}
+
+model RecomputeTask {
+  id            String       @id @default(cuid())
+  jobId         String
+  job           RecomputeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  phase         Phase
+  status        String       @default("PENDING")
+  inputRefsJson Json
+  createdAt     DateTime     @default(now())
+
+  @@index([jobId, status])
+}
