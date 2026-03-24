@@ -10,7 +10,7 @@
 import { prisma } from "@/lib/prisma";
 import { chunkText } from "./chunker";
 import { createHash } from "crypto";
-import type { Prisma } from "@generated/prisma";
+import type { Prisma } from "@prisma/client";
 
 export interface IngestDocumentInput {
   projectId: string;

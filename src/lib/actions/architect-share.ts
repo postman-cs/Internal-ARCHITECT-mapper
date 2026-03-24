@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@generated/prisma";
+import { Prisma } from "@prisma/client";
 import { requireAuth } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";

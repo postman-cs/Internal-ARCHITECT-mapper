@@ -9,7 +9,7 @@ import { createEvidenceSnapshot } from "@/lib/cascade/snapshot";
 import { runImpactAnalysis } from "@/lib/cascade/impact";
 import type { PocDeliverable } from "@/lib/poc-deliverables-types";
 import { DEFAULT_POC_DELIVERABLES } from "@/lib/poc-deliverables-types";
-import { Prisma } from "@generated/prisma";
+import { Prisma } from "@prisma/client";
 
 export interface ServiceEntry {
   domain: string;
