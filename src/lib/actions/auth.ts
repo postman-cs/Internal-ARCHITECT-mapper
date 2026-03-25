@@ -76,6 +76,28 @@ export async function signupAction(_prev: unknown, formData: FormData) {
   redirect("/dashboard");
 }
 
+export async function loginAsUserAction(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "User not found" };
+
+  const session = await getSession();
+  session.userId = user.id;
+  session.email = user.email;
+  session.name = user.name;
+  session.isAdmin = user.isAdmin || user.role === "ADMIN";
+  session.role = user.role;
+  await session.save();
+
+  redirect("/dashboard");
+}
+
+export async function getUsers() {
+  return prisma.user.findMany({
+    select: { id: true, name: true, email: true, role: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function logoutAction() {
   const session = await getSession();
   session.destroy();
