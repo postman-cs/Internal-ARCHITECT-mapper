@@ -1,6 +1,81 @@
-# Architect Mapper — CortexLab Architecture Mapping Tool
+# Internal-ARCHITECT-mapper
 
 A **Next.js 15** web application for capturing and analyzing a customer's API and platform architecture during Postman Customer Success engagements. Consultants use it to map a customer's technology landscape, generate service templates, and kick off AI-driven discovery workflows.
+
+## Application Flow
+
+```mermaid
+flowchart TD
+    subgraph internal [CSE Internal Workflow]
+        A1[Login to Dashboard]
+        A2[Create / Select Project]
+        A3[Open Architect Mapper]
+        A4[Fill Architecture Forms]
+        A5[Add Service Catalog Entries]
+        A6[Submit Map]
+    end
+
+    subgraph customer [Customer Self-Service]
+        B1[CSE generates shareable link]
+        B2["Customer opens /architect/fill/[token]"]
+        B3[Customer fills out architecture details]
+        B4[Submission via webhook]
+    end
+
+    subgraph output [Generated Artifacts]
+        C1[Service Constellation YAML]
+        C2[Topology Graph - nodes/edges]
+        C3[Phase Artifacts - DISCOVERY / TOPOLOGY]
+        C4[POC Deliverables JSON]
+        C5[XP Award]
+    end
+
+    subgraph downstream [Downstream Integration]
+        D1[AI Pipeline Ingest]
+        D2[Cascade Phase Processing]
+    end
+
+    A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> output
+    B1 --> B2 --> B3 --> B4 --> output
+    output --> downstream
+```
+
+## Architecture Capture Scope
+
+```mermaid
+flowchart LR
+    subgraph infra [Infrastructure]
+        I1[Source Control]
+        I2[CI/CD]
+        I3[API Gateway]
+        I4[Cloud Provider]
+    end
+
+    subgraph security [Security]
+        S1[Identity / Auth]
+        S2[Secrets Management]
+    end
+
+    subgraph observability [Observability]
+        O1[Monitoring]
+        O2[Spec Hosting]
+        O3[Observability Platform]
+    end
+
+    subgraph postmanStrategy [Postman Strategy]
+        P1[Workspace Layout]
+        P2[Current Plan / Tier]
+        P3[Governance Stage]
+    end
+
+    subgraph catalog [Service Catalog]
+        SC1[Domains & Repos]
+        SC2[Specs & Environments]
+        SC3[Gateway Posture]
+    end
+
+    infra & security & observability & postmanStrategy & catalog --> output[Architecture Map]
+```
 
 ## Features
 
